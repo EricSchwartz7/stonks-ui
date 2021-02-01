@@ -1,4 +1,5 @@
 .Stonks {
+    width: 100%;
     span {
         padding: 5px;
     }
@@ -21,11 +22,22 @@
         height: 40px;
     }
 
+    .radio {
+        input {
+            margin: 10px;
+        }
+    }
+
     .inactive {
         background-color: lightgreen;
     }
 
     .loading {
         background-color: yellow;
+    }
+
+    .chart {
+        margin: auto;
+        width: 90%;
     }
 }

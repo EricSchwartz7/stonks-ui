@@ -3,6 +3,7 @@ import axios from 'axios';
 import Highcharts from 'highcharts'
 import HighchartsReact from 'highcharts-react-official'
 import './Stonks.scss'
+import { findRenderedComponentWithType } from 'react-dom/test-utils';
 
 let INCREMENTS = {
     m: "minute",
@@ -14,11 +15,12 @@ class Stonks extends Component {
     state = {
         loading: false,
         postData: [],
-        amount: 0,
+        amount: 2,
         amountCounter: 0,
         keyword: "",
         timeIncrement: "d",
         comments: false,
+        postType: "P",
         chartTitle: "",
         seriesName: ""
     }
@@ -26,28 +28,30 @@ class Stonks extends Component {
     fetchRedditData () {
         let i = this.state.amountCounter;
         let timeIncrement = this.state.timeIncrement;
-        let comments = this.state.comments;
+        let postType = this.state.postType;
         let keyword = this.state.keyword;
+        let url = `http://localhost:4567/${keyword}?posttype=${postType}&after=${i}&before=${i - 1}&timeincrement=${timeIncrement}`;
+
         if (i > 0) {
-            axios.get(`http://localhost:4567/${keyword}?comments=${comments}&after=${i}&before=${i - 1}&timeincrement=${timeIncrement}`).then(response => {
-                console.log(response);
-                let postData = this.state.postData;
-                postData.push(response.data);
-                this.setState({
-                    postData: postData,
-                    amountCounter: --i,
-                    loading: i > 0
-                });
-                window.setTimeout(this.fetchRedditData.bind(this), 500);
+            axios.get(url).then(response => {
+                console.log(response.data);
+                if (response.data[1] !== null) {
+                    let postData = this.state.postData;
+                    postData.push(response.data);
+                    this.setState({
+                        postData: postData,
+                        amountCounter: --i,
+                        loading: i > 0
+                    });
+                }
+                window.setTimeout(this.fetchRedditData.bind(this), 300);
             });
-        } else {
-            console.log("Try again!");
         }
     }
 
     setChartTitle () {
         let chartTitle = "";
-        let postType = this.state.comments ? "Comments" : "Posts";
+        let postType = this.state.postType === "C" ? "Comments" : "Posts";
         let increment = INCREMENTS[this.state.timeIncrement];
         if (postType && increment) {
             chartTitle = `${postType} per ${increment}`;
@@ -58,20 +62,28 @@ class Stonks extends Component {
     getChartOptions () {
         return {
             title: {
-                text: this.state.chartTitle
+                text: this.state.chartTitle,
+                style: {color: "white"}
             },
-            colors: ["blue"],
+            colors: ["lightgreen"],
             chart: {
                 // height: 200,
-                width: 1000,
-                type: "line"
+                // width: "100%",
+                type: "line",
+                backgroundColor: "#282c34"
             },
             xAxis: {
-                categories: this.state.postData ? this.state.postData.map(dataSet => dataSet[0]) : []
+                categories: this.state.postData ? this.state.postData.map(dataSet => dataSet[0]) : [],
+                labels: {
+                    style: {color: "white"}
+                }
             },
             yAxis: {
                 title: {
                     text: null
+                },
+                labels: {
+                    style: {color: "white"}
                 }
             },
             series: [{
@@ -82,7 +94,12 @@ class Stonks extends Component {
                         key: i
                     }
                 }) : []
-            }]
+            }],
+            legend: {
+                itemStyle: {
+                    color: "white"
+                }
+            }
         };
     }
 
@@ -124,14 +141,26 @@ class Stonks extends Component {
             <div className="Stonks">
                 <h3>Reddit Hype</h3>
                 <form onSubmit={this.handleRun.bind(this)}>
-                    <div>
+                    <div className="radio">
                         <label>
-                            <span>Comments</span>
-                            <input 
-                                type="checkbox" 
-                                name="comments" 
-                                checked={this.state.comments} 
-                                onChange={this.handleInputChange.bind(this)}/>
+                            Posts
+                            <input
+                                type="radio"
+                                name="postType"
+                                value="P"
+                                checked={this.state.postType === "P"}
+                                onChange={this.handleInputChange.bind(this)}
+                            />
+                        </label>
+                        <label>
+                            Comments
+                            <input
+                                type="radio"
+                                name="postType"
+                                value="C"
+                                checked={this.state.postType === "C"}
+                                onChange={this.handleInputChange.bind(this)}
+                            />
                         </label>
                     </div>
                     <div>
@@ -160,7 +189,9 @@ class Stonks extends Component {
                     <input type="submit" value="Run" className={buttonClass} />
                 </form>
 
-                {this.state.chartTitle ? getChart() : ""}
+                <div className="chart">
+                    {this.state.chartTitle ? getChart() : ""}
+                </div>
             </div>
         );
     }
