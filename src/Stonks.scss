@@ -1,0 +1,31 @@
+.Stonks {
+    span {
+        padding: 5px;
+    }
+
+    form {
+        padding: 20px;
+    }
+
+    input {
+        margin: auto;
+    }
+
+    input[type=number] {
+        width: 50px;
+    }
+
+    input[type=submit] {
+        margin-top: 10px;
+        width: 100px;
+        height: 40px;
+    }
+
+    .inactive {
+        background-color: lightgreen;
+    }
+
+    .loading {
+        background-color: yellow;
+    }
+}
