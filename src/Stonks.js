@@ -5,12 +5,16 @@ import HighchartsReact from 'highcharts-react-official'
 import './Stonks.scss'
 import { findRenderedComponentWithType } from 'react-dom/test-utils';
 
+const BASE_URL = "http://localhost:4567/";
+const REDDIT_URL = "https://www.reddit.com/"
+
 let INCREMENTS = {
     m: "minute",
     h: "hour",
     d: "day",
     w: "week"
 }
+
 class Stonks extends Component {
     state = {
         loading: false,
@@ -22,15 +26,17 @@ class Stonks extends Component {
         comments: false,
         postType: "P",
         chartTitle: "",
-        seriesName: ""
+        seriesName: "",
+        redditData: [],
+        afterID: ""
     }
 
-    fetchRedditData () {
+    fetchPushshiftData () {
         let i = this.state.amountCounter;
         let timeIncrement = this.state.timeIncrement;
         let postType = this.state.postType;
         let keyword = this.state.keyword;
-        let url = `http://localhost:4567/${keyword}?posttype=${postType}&after=${i}&before=${i - 1}&timeincrement=${timeIncrement}`;
+        let url = `${BASE_URL}pushshift/${keyword}?posttype=${postType}&after=${i}&before=${i - 1}&timeincrement=${timeIncrement}`;
 
         if (i > 0) {
             axios.get(url).then(response => {
@@ -44,7 +50,7 @@ class Stonks extends Component {
                         loading: i > 0
                     });
                 }
-                window.setTimeout(this.fetchRedditData.bind(this), 300);
+                window.setTimeout(this.fetchPushshiftData.bind(this), 300);
             });
         }
     }
@@ -121,7 +127,50 @@ class Stonks extends Component {
             loading: true,
             chartTitle: this.setChartTitle(),
             seriesName: this.state.keyword
-        }, this.fetchRedditData.bind(this));
+        }, this.fetchPushshiftData.bind(this));
+    }
+
+    handleRedditClick (event, afterID) {
+        if (this.state.token) { 
+            this.fetchRedditApi(null, afterID);
+        } else {
+            this.getTokenThenFetch(afterID);
+        }
+    }
+
+    getTokenThenFetch (afterID) {
+        axios.get(`${BASE_URL}access_token`).then(response => {
+            console.log(response)
+            this.setState({
+                token: response.data
+            }, () => {
+                this.fetchRedditApi(null, afterID);
+            });
+        });
+    }
+
+    fetchRedditApi (event, afterID) {
+        let url = `${BASE_URL}reddit/${this.state.keyword}`
+
+        let params = {} 
+        if (afterID) {
+            params.after = afterID;
+        }
+        if (this.state.token) {
+            params.token = this.state.token;
+        }
+
+        axios.get(url, {params: params}).then(response => {
+            console.log(response);
+            this.setState({
+                redditData: response.data.children,
+                afterID: response.data.after
+            });
+        });
+    }
+
+    nextPage () {
+        this.handleRedditClick(null, this.state.afterID);
     }
 
     render () {
@@ -191,6 +240,16 @@ class Stonks extends Component {
 
                 <div className="chart">
                     {this.state.chartTitle ? getChart() : ""}
+                </div>
+
+                <button onClick={this.handleRedditClick.bind(this)}>Fetch from Reddit API</button>
+                <div className="reddit-links">
+                    {this.state.redditData ? this.state.redditData.map((post, i) => {
+                        return (<div className="reddit-link" key={i}>
+                            <a href={REDDIT_URL + post.data.permalink} target="_blank">{post.data.title}</a>
+                        </div>);
+                    }) : ""}
+                    {this.state.afterID ? <button onClick={this.nextPage.bind(this)}>Next Page</button> : ""}
                 </div>
             </div>
         );
